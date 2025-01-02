@@ -1,3 +1,4 @@
 streamlit 
 yt-dlp
-rich==13.7.1
+isort
+black
