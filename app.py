@@ -117,7 +117,7 @@ if video_url:
                 cmd = [
                     "yt-dlp",
                     "-f",
-                    selected_format_code,
+                    "bestvideo+bestaudio",
                     "--merge-output-format",
                     "mp4",
                     "--live-from-start",
