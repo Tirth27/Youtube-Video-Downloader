@@ -7,15 +7,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Prompt user for video link
-echo -e "${YELLOW}Enter the YouTube video URL:${NC}"
+# Prompt user for video or playlist link
+echo -e "${YELLOW}Enter the YouTube video or playlist URL:${NC}"
 read VIDEO_URL
 
-# Ask user if this is a live stream, audio-only, or a regular video
+# Ask user for the type of download
 echo -e "${YELLOW}Select download type:${NC}"
 echo -e "${GREEN}1) Regular video${NC}"
 echo -e "${GREEN}2) Live stream${NC}"
 echo -e "${GREEN}3) Audio only${NC}"
+echo -e "${GREEN}4) Entire playlist${NC}"
 read DOWNLOAD_TYPE
 
 # Create Downloads/YT-DLP folder if it doesn't exist
@@ -38,6 +39,23 @@ elif [ "$DOWNLOAD_TYPE" == "3" ]; then
     # Download selected audio format with highest bitrate
     echo -e "${BLUE}Downloading selected audio format...${NC}"
     yt-dlp -f "$AUDIO_ID" --extract-audio --audio-format mp3 -o "$DOWNLOAD_PATH/%(title)s.%(ext)s" "$VIDEO_URL"
+elif [ "$DOWNLOAD_TYPE" == "4" ]; then
+    # Extract first video URL from playlist
+    FIRST_VIDEO_URL=$(yt-dlp --flat-playlist -i --get-url "$VIDEO_URL" | head -n 1)
+    echo -e "${YELLOW}Fetching available formats for the first video in the playlist...${NC}"
+    yt-dlp -F "$FIRST_VIDEO_URL"
+    
+    # Prompt user for video format ID
+    echo -e "${YELLOW}Enter the video format ID you want to download for the playlist:${NC}"
+    read VIDEO_ID
+    
+    # Prompt user for audio format ID
+    echo -e "${YELLOW}Enter the audio format ID you want to download for the playlist:${NC}"
+    read AUDIO_ID
+    
+    # Download entire playlist with selected formats
+    echo -e "${BLUE}Downloading entire playlist with selected formats...${NC}"
+    yt-dlp -f "$VIDEO_ID+$AUDIO_ID" --merge-output-format mp4 -o "$DOWNLOAD_PATH/%(playlist_title)s/%(title)s.%(ext)s" "$VIDEO_URL"
 else
     # Display available formats
     echo -e "${YELLOW}Fetching available formats...${NC}"
