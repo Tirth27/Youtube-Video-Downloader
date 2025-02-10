@@ -23,10 +23,12 @@ read DOWNLOAD_TYPE
 DOWNLOAD_PATH="$HOME/Downloads/YT-DLP"
 mkdir -p "$DOWNLOAD_PATH"
 
+# Live Stream
 if [ "$DOWNLOAD_TYPE" == "2" ]; then
     # Download live stream from start
     echo -e "${BLUE}Downloading live stream...${NC}"
     yt-dlp -f bestvideo+bestaudio --merge-output-format mp4 --live-from-start -o "$DOWNLOAD_PATH/%(title)s_LIVE.%(ext)s" "$VIDEO_URL"
+# Audio Only
 elif [ "$DOWNLOAD_TYPE" == "3" ]; then
     # Display available audio formats
     echo -e "${YELLOW}Fetching available audio formats...${NC}"
@@ -39,9 +41,16 @@ elif [ "$DOWNLOAD_TYPE" == "3" ]; then
     # Download selected audio format with highest bitrate
     echo -e "${BLUE}Downloading selected audio format...${NC}"
     yt-dlp -f "$AUDIO_ID" --extract-audio --audio-format mp3 -o "$DOWNLOAD_PATH/%(title)s.%(ext)s" "$VIDEO_URL"
+# Entire Playlist
 elif [ "$DOWNLOAD_TYPE" == "4" ]; then
-    # Extract first video URL from playlist
-    FIRST_VIDEO_URL=$(yt-dlp --flat-playlist -i --get-url "$VIDEO_URL" | head -n 1)
+	# Extract first video URL from playlist safely
+    FIRST_VIDEO_URL=$(yt-dlp --flat-playlist --playlist-items 1 --print-json "$VIDEO_URL" | jq -r '.url')
+    
+    if [ -z "$FIRST_VIDEO_URL" ]; then
+        echo -e "${RED}Error retrieving the first video URL from the playlist.${NC}"
+        exit 1
+    fi
+    
     echo -e "${YELLOW}Fetching available formats for the first video in the playlist...${NC}"
     yt-dlp -F "$FIRST_VIDEO_URL"
     
@@ -53,9 +62,9 @@ elif [ "$DOWNLOAD_TYPE" == "4" ]; then
     echo -e "${YELLOW}Enter the audio format ID you want to download for the playlist:${NC}"
     read AUDIO_ID
     
-    # Download entire playlist with selected formats
-    echo -e "${BLUE}Downloading entire playlist with selected formats...${NC}"
-    yt-dlp -f "$VIDEO_ID+$AUDIO_ID" --merge-output-format mp4 -o "$DOWNLOAD_PATH/%(playlist_title)s/%(title)s.%(ext)s" "$VIDEO_URL"
+    # Download entire playlist in parallel with selected formats
+    echo -e "${BLUE}Downloading entire playlist with selected formats in parallel...${NC}"
+    yt-dlp -f "$VIDEO_ID+$AUDIO_ID" --merge-output-format mp4 -o "$DOWNLOAD_PATH/%(playlist_title)s/%(title)s.%(ext)s" "$VIDEO_URL" --concurrent-fragments 10
 else
     # Display available formats
     echo -e "${YELLOW}Fetching available formats...${NC}"
@@ -71,7 +80,7 @@ else
     
     # Download and merge video and audio
     echo -e "${BLUE}Downloading and merging selected formats...${NC}"
-    yt-dlp -f "$VIDEO_ID+$AUDIO_ID" --merge-output-format mp4 -o "$DOWNLOAD_PATH/%(title)s.%(ext)s" "$VIDEO_URL"
+    yt-dlp -f "$VIDEO_ID+$AUDIO_ID" --merge-output-format mp4 -o "$DOWNLOAD_PATH/%(title)s.%(ext)s" "$VIDEO_URL" --concurrent-fragments 10
 fi
 
 echo -e "${GREEN}Download complete! Files saved to $DOWNLOAD_PATH${NC}"
